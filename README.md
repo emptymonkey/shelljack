@@ -1,4 +1,3 @@
-fsh
-===
+# shelljack #
 
 A mitm terminal sniffer.

@@ -3,14 +3,14 @@ CFLAGS = -std=gnu99 -Wall -Wextra -pedantic -O3
 LDIR = -L../ctty -L../ptrace_do
 IDIR = -I../ctty -I../ptrace_do
 
-all: fsh
+all: shelljack
 
-fsh: fsh.o
-	$(CC) $(LDIR) fsh.o -o fsh -lctty -lptrace_do
-	strip -s fsh
+shelljack: shelljack.o
+	$(CC) $(LDIR) shelljack.o -o shelljack -lctty -lptrace_do
+	strip -s shelljack
 
-fsh.o: fsh.c
-	$(CC) $(IDIR) $(CFLAGS) -c fsh.c
+shelljack.o: shelljack.c
+	$(CC) $(IDIR) $(CFLAGS) -c shelljack.c
 
 clean: 
-	rm fsh.o fsh
+	rm shelljack.o shelljack
