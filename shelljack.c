@@ -116,10 +116,12 @@ int main(int argc, char **argv){
 	struct sigaction act, oldact;
 	struct winsize argp;
 
+	struct stat tty_info;
+
 	socklen_t sa_len;
 	fd_set fd_select;
 	pid_t sig_pid;
-
+	
 	void *remote_addr;
 
 	if(argc != 3){
@@ -275,6 +277,10 @@ int main(int argc, char **argv){
 		error(-1, errno, "open(%s, %d)", tty_name, O_RDWR);
 	}
 
+	if((retval = fstat(original_tty_fd, &tty_info)) == -1){
+		error(-1, errno, "fstat(%d, %lx)", original_tty_fd, (unsigned long) &tty_info);
+	}
+
 	if((retval = tcgetattr(original_tty_fd, &saved_termios_attrs)) == -1){
 		error(-1, errno, "tcgetattr(%d, %lx)", original_tty_fd, (unsigned long) &saved_termios_attrs);
 	}
@@ -375,6 +381,13 @@ int main(int argc, char **argv){
 
 	if(!(tmp_ptr = ptsname(new_tty_fd))){
 		error(-1, errno, "ptsname(%d)", new_tty_fd);
+	}
+
+	// If we are running as root, make sure to chmod the new tty to the match the old one.
+	if(!getuid()){
+		if((retval = chown(tmp_ptr, tty_info.st_uid, -1)) == -1){
+			error(-1, errno, "chown(%s, %d, %d)", tmp_ptr, tty_info.st_uid, -1);
+		}
 	}
 
 	memcpy(remote_scratch, tmp_ptr, strlen(tmp_ptr));
