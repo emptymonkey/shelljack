@@ -12,7 +12,7 @@ No. _shelljack_ works entirely in [user space](http://en.wikipedia.org/wiki/User
 
 **What is "shelljacking"?**
 
-This is the term I use to describe a very specific type of terminal sniffing attack. _shelljack_ performs a [pseudo-terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack). It will happily target any process, but it is designed to be used against a [session leader](http://linux.die.net/man/7/credentials), which usually means a users [shell](http://en.wikipedia.org/wiki/Unix_shell). It's also important to note that a successful shelljacking means you are now embedded in the traffic flow between user and their shell. *You will be sniffing all of the traffic down the line, including child processes and ssh sessions to other hosts!*
+This is the term I use to describe a very specific type of terminal sniffing attack. _shelljack_ performs a [pseudo-terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack). It was designed to be used against a [session leader](http://linux.die.net/man/7/credentials), which usually means a users [shell](http://en.wikipedia.org/wiki/Unix_shell). It's also important to note that a successful shelljacking means you are now embedded in the traffic flow between user and their shell. *You will be sniffing all of the traffic down the line, including child processes and ssh sessions to other hosts!*
 
 **That's awesome! [1337 h4X0rZ rUL3!!](http://hackertyper.com/)**
 
