@@ -4,9 +4,9 @@ _shelljack_ is a [Linux](http://en.wikipedia.org/wiki/Linux) [terminal](http://e
 
 **What is a "terminal sniffer"?**
 
-A terminal sniffer is a piece of software that inspects user [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. The most common usage of this term would be a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging). However, in addition to reporting all of the keystrokes put into the terminal, _shelljack_ also reports all of the data returned back out through the terminal.
+A terminal sniffer is a piece of software that inspects user [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. This is similar to a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging), but in addition to reporting all of the keystrokes put into the terminal, _shelljack_ also reports all of the data returned back out through the terminal.
 
-**So it's a kernel module then?**
+**Is it a [kernel module](http://en.wikipedia.org/wiki/Kernel_module)?**
 
 No. _shelljack_ works entirely in [user space](http://en.wikipedia.org/wiki/User_space).
 
