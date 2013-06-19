@@ -146,11 +146,9 @@ As noted in the [tty_ioctl](http://linux.die.net/man/4/tty_ioctl) [manpage](http
 
 # Similar Works #
 
-I wrote _shelljack_ for my own education and as a proof-of-concept. After I had already worked out the difficult bits, I came across several other codebases that used similar strategies, though for different outcomes.
+I wrote _shelljack_ for my own education and as a proof-of-concept. After I had already worked out the difficult bits, I came across several other codebases that used similar strategies, though for different outcomes. They are worth study if you are interested in how this technique works.
 
 * [retty](http://pasky.or.cz/dev/retty/) is a tiny tool that lets you attach processes running on other terminals.
 * [neercs](http://caca.zoy.org/wiki/neercs) allows you to detach a session from a terminal.
 * [injcode](https://github.com/ThomasHabets/injcode) injects code into a running process.
 * [reptyr](http://blog.nelhage.com/2011/02/changing-ctty/) takes a process that is currently running in one terminal, and transplants it to a new terminal.
-
-As you can see, my idea was hardly original, though I found it odd that nobody was using this technique for terminal sniffing. Some of those code bases are quite well done. If you're interested in learning more about this technique, I would suggest studying them.
