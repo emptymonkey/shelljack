@@ -150,7 +150,7 @@ I wrote _shelljack_ for my own education and as a proof-of-concept. After I had 
 
 * [retty](http://pasky.or.cz/dev/retty/): retty is a tiny tool that lets you attach processes running on other terminals.
 * [neercs](http://caca.zoy.org/wiki/neercs): neercs allows you to detach a session from a terminal.
-* [injcode](http://blog.habets.pp.se/2009/03/Moving-a-process-to-another-terminal): injcode injects code into a running process.
+* [injcode](https://github.com/ThomasHabets/injcode): injcode injects code into a running process.
 * [reptyr](http://blog.nelhage.com/2011/02/changing-ctty/): reptyr takes a process that is currently running in one terminal, and transplants it to a new terminal.
 
 As you can see, my idea was hardly original, though I found it odd that nobody was using this technique for terminal sniffing. Some of those code bases are quite well done. If you are interested in learning more about this technique, I would suggest studying them.
