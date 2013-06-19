@@ -144,3 +144,13 @@ In addition, I've also written another tool that isn't needed by _shelljack_, bu
 
 As noted in the [tty_ioctl](http://linux.die.net/man/4/tty_ioctl) [manpage](http://en.wikipedia.org/wiki/Manpage), an existing process can only switch controlling ttys if it is a session leader. Because of this, while _shelljack_ will be successful against the shell itself, any *existing* child processes will not be able to switch with it. They won't usually die during the shelljacking, but their I/O will act strangely if it relies on the tty. It is best to target shells that are semi-idle, or attack them during the login process.
 
+# Similar Works #
+
+I wrote _shelljack_ for my own education and as a proof-of-concept. After I had already worked out the difficult bits, I came across several other codebases that used a similar strategy, though generally for a different outcome.
+
+* [retty](http://pasky.or.cz/dev/retty/): retty is a tiny tool that lets you attach processes running on other terminals.
+* [neercs](http://caca.zoy.org/wiki/neercs): neercs allows you to detach a session from a terminal.
+* [injcode](http://blog.habets.pp.se/2009/03/Moving-a-process-to-another-terminal): injcode injects code into a running process.
+* [reptyr](http://blog.nelhage.com/2011/02/changing-ctty/): reptyr takes a process that is currently running in one terminal, and transplants it to a new terminal.
+
+As you can see, my idea was hardly original, though I found it odd that nobody was using this technique for terminal sniffing. Some of those code bases are quite well done. If you are interested in learning more about this technique, I would suggest studying them.
