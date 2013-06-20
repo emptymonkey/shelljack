@@ -4,7 +4,7 @@ _shelljack_ is a [computer surveillance](http://en.wikipedia.org/wiki/Computer_s
 
 **What exactly is "shelljacking"?**
 
-This is the term I use to describe the [pseudo-terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack) used by _shelljack_. This technique embeds the attacker between the target user and their [shell](http://en.wikipedia.org/wiki/Shell_%28computing%29). From this position the attacker is able to inspect and capture all [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. This is similar to a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging), but will also return the output from the command line as well. In addition to the data being captured, it is also forwarded to a [remote listener](http://en.wikipedia.org/wiki/Netcat) for analysis in real time. 
+This is the term I use to describe a [pseudo-terminal](http://en.wikipedia.org/wiki/Pseudo_terminal) [mitm attack](http://en.wikipedia.org/wiki/Man-in-the-middle_attack). This technique embeds the attacker between the target user and their [shell](http://en.wikipedia.org/wiki/Shell_%28computing%29). From this position the attacker is able to inspect and capture all [I/O](http://en.wikipedia.org/wiki/I/o) as it crosses the terminal. This is similar to a [keystroke logger](http://en.wikipedia.org/wiki/Keystroke_logging), but will also return the output from the command line as well. In addition to the data being captured, it is also forwarded to a [remote listener](http://en.wikipedia.org/wiki/Netcat) for analysis in real time. 
 
 This embedded position allows the attacker to capture *all* of the traffic that crosses the terminal. *This includes child processes and ssh sessions to other hosts!*
 
@@ -16,7 +16,7 @@ While this may not be a ["sploit"](http://en.wikipedia.org/wiki/Sploit), it is a
 
 **Is this a [kernel module](http://en.wikipedia.org/wiki/Kernel_module)?**
 
-No. _shelljack_ works entirely in [user space](http://en.wikipedia.org/wiki/User_space).
+No. _shelljack_ is a [user space](http://en.wikipedia.org/wiki/User_space) tool.
 
 **Do I need to be root to use it?**
 
