@@ -32,15 +32,15 @@ No. You need "appropriate permissions". This means that you will need the abilit
 
 _shelljack_ is a [malicious](http://en.wikipedia.org/wiki/Malware) [terminal emulator](http://en.wikipedia.org/wiki/Terminal_emulator) that uses [ptrace](http://en.wikipedia.org/wiki/Ptrace) to insert itself between a shell and it's [controlling tty](https://github.com/emptymonkey/ctty).
 
-**Please tell me more about this [deep magic](http://en.wikipedia.org/wiki/Deep_magic) of which you speak!**
-
-* ptrace is the debugging interface provided by the Linux kernel. It is a *very* powerful tool. It is also very good at forcing you to *really* understand the inner workings of a Linux process when you try to use it. The best introduction I've seen comes in the form of two articles by Pradeep Padala dating back to 2002: [Playing with ptrace, Part I](http://www.linuxjournal.com/article/6100) and [Playing with ptrace, Part II](http://www.linuxjournal.com/article/6210)
-
-* A solid understanding of [tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29) fundamentals is necessary to fully understand and leverage the command line. The best tutorial on this topic is easily [The TTY demystified](www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
-
 **What Architectures / OSs will this run on?**
 
 Currently, _shelljack_ will only run on x86_64 Linux. Because _shelljack_ uses the Linux ptrace interface to inject assembly language [syscalls](http://en.wikipedia.org/wiki/Syscall) into a target process, nothing here is portable. That said, check out my other project, [_ptrace_do_](https://github.com/emptymonkey/ptrace_do). If I get around to supporting _ptrace_do_ for other architectures, then porting _shelljack_ shouldn't be too hard.
+
+**Please tell me more about this [deep magic](http://en.wikipedia.org/wiki/Deep_magic) of which you speak!**
+
+* ptrace is the debugging interface provided by the Linux kernel. It is a *very* powerful tool, and the aspiring hacker would do well to study it. The best introduction I've seen comes in the form of two articles by Pradeep Padala dating back to 2002: [Playing with ptrace, Part I](http://www.linuxjournal.com/article/6100) and [Playing with ptrace, Part II](http://www.linuxjournal.com/article/6210)
+
+* A solid understanding of [tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29) fundamentals is necessary to fully understand the Unix / Linux command line. The best tutorial on this topic is easily [The TTY demystified](www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
 
 # Usage #
 
@@ -114,7 +114,7 @@ Also note, _shelljack_ was designed with the ability to attack the shell that la
 To help with the heavy lifting, I've written two supporting libraries that are both needed by _shelljack_:
 
 * [_ptrace_do_](https://github.com/emptymonkey/ptrace_do): A ptrace library for easy syscall injection in Linux.
-* [_ctty_](https://github.com/emptymonkey/ctty): A library and tool for discovering and mapping Controlling TTYs in Linux.
+* [_ctty_](https://github.com/emptymonkey/ctty): A library and tool for discovering and mapping of Controlling TTYs in Linux.
 
 In addition, I've also written another tool that isn't needed by _shelljack_, but helps with tty forensics. 
 
