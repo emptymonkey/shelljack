@@ -58,7 +58,7 @@ Start by setting up a listener:
 
 	empty@monkey:~$ tty
 	/dev/pts/0
-	empty@monkey:~$ while [ 1 ]; do ncat -l localhost 9999; done
+	empty@monkey:~$ ncat -k -l localhost 9999
 
 Since this is a demo, let's also examine the shell we want to target:
 
