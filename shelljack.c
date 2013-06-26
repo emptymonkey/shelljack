@@ -613,6 +613,11 @@ CLEAN_UP:
 			}else{
 				if(bytes_read == 1){
 					if((retval = write(1, &char_read, 1)) == -1){
+
+						// If the remote write() fails, do we *really* want to exit as a failure?
+						// I suspect we'd want to comment out this error() call (and the one
+						// further down) and let it fail quietly, while continuing to pass 
+						// chars back and forth. 
 						error(-1, errno, "write(%d, %lx, %d)", \
 								1, (unsigned long) &char_read, 1);
 					}
