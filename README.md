@@ -148,3 +148,8 @@ While _shelljack_ was written independent of any other codebase, I did come acro
 * [neercs](http://caca.zoy.org/wiki/neercs) allows you to detach a session from a terminal.
 * [injcode](https://github.com/ThomasHabets/injcode) injects code into a running process.
 * [reptyr](http://blog.nelhage.com/2011/02/changing-ctty/) takes a process that is currently running in one terminal, and transplants it to a new terminal.
+
+## A Quick Note on Ethics ##
+
+I write and release these tools with the intention of educating the larger [IT](http://en.wikipedia.org/wiki/Information_technology) community and empowering legitimate pentesters. If I can write these tools in my spare time, then rest assured that the dedicated malicious actors have already developed versions of their own.
+
