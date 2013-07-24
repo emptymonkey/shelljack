@@ -122,17 +122,17 @@ In addition, I've also written another tool that isn't needed by _shelljack_, bu
 
 # Installation #
 
-	git clone git@github.com:emptymonkey/ptrace_do.git
+	git clone https://github.com/emptymonkey/ptrace_do.git
 	cd ptrace_do
 	make
 	cd ..
 
-	git clone git@github.com:emptymonkey/ctty.git
+	git clone https://github.com/emptymonkey/ctty.git
 	cd ctty
 	make
 	cd ..
 
-	git clone git@github.com:emptymonkey/shelljack.git
+	git clone https://github.com/emptymonkey/shelljack.git
 	cd shelljack
 	make
 
