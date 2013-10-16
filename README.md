@@ -40,7 +40,7 @@ Currently, _shelljack_ will only run on x86_64 Linux. Because _shelljack_ uses t
 
 * ptrace is the debugging interface provided by the Linux kernel. It is a *very* powerful tool, and the aspiring hacker would do well to study it. The best introduction I've seen comes in the form of two articles by Pradeep Padala dating back to 2002: [Playing with ptrace, Part I](http://www.linuxjournal.com/article/6100) and [Playing with ptrace, Part II](http://www.linuxjournal.com/article/6210)
 
-* A solid understanding of [tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29) fundamentals is necessary to fully understand the Unix / Linux command line. The best tutorial on this topic is easily [The TTY demystified](www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
+* A solid understanding of [tty](http://en.wikipedia.org/wiki/Tty_%28Unix%29) fundamentals is necessary to fully understand the Unix / Linux command line. The best tutorial on this topic is easily [The TTY demystified](http://www.linusakesson.net/programming/tty/) by [Linus Åkesson](http://www.linusakesson.net/pages/me.php). 
 
 # Usage #
 
