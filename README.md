@@ -34,7 +34,7 @@ _shelljack_ is a [malicious](http://en.wikipedia.org/wiki/Malware) [terminal emu
 
 **What Architectures / OSs will this run on?**
 
-Currently, _shelljack_ will only run on x86_64 Linux. Because _shelljack_ uses the Linux ptrace interface to inject assembly language [syscalls](http://en.wikipedia.org/wiki/Syscall) into a target process, nothing here is portable. That said, check out my other project, [_ptrace_do_](https://github.com/emptymonkey/ptrace_do). If I get around to supporting _ptrace_do_ for other architectures, then porting _shelljack_ shouldn't be too hard.
+Currently, _shelljack_ will only run on x86_64 Linux. Because _shelljack_ uses the Linux ptrace interface to inject assembly language [syscalls](http://en.wikipedia.org/wiki/Syscall) into a target process, nothing here is portable. That said, check out my other project, [<i>ptrace_do</i>](https://github.com/emptymonkey/ptrace_do). If I get around to supporting <i>ptrace_do</i> for other architectures, then porting _shelljack_ shouldn't be too hard.
 
 **Please tell me more about this [deep magic](http://en.wikipedia.org/wiki/Deep_magic) of which you speak!**
 
@@ -113,7 +113,7 @@ Also note, _shelljack_ was designed with the ability to attack the shell that la
 
 To help with the heavy lifting, I've written two supporting libraries that are both needed by _shelljack_:
 
-* [_ptrace_do_](https://github.com/emptymonkey/ptrace_do): A ptrace library for easy syscall injection in Linux.
+* [<i>ptrace_do</i>](https://github.com/emptymonkey/ptrace_do): A ptrace library for easy syscall injection in Linux.
 * [_ctty_](https://github.com/emptymonkey/ctty): A library and tool for discovering and mapping of Controlling TTYs in Linux.
 
 In addition, I've also written another tool that isn't needed by _shelljack_, but helps with tty forensics. 
