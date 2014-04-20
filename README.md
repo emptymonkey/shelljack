@@ -22,6 +22,8 @@ No. _shelljack_ is a [user space](http://en.wikipedia.org/wiki/User_space) tool.
 
 No. You need "appropriate permissions". This means that you will need the ability to execute code on the target host either as root or as the target user. 
 
+It should be noted that Ubuntu has shiped, since version 10.10, with a patch that restricts the scope of ptrace's effectiveness. Because of this, shelljack will need root privileges for in order to work on Ubuntu.
+
 **When would I ever need this?**
 
 * As a forensic analyist, you can use _shelljack_ to perform surveillance on the target of your investigation (after you've recieved the appropriate authority to do so from the heads of your Security, Legal, and HR teams, of course.)
@@ -142,7 +144,9 @@ As noted in the [tty_ioctl](http://linux.die.net/man/4/tty_ioctl) [manpage](http
 
 # Similar Works #
 
-While _shelljack_ was written independent of any other codebase, I did come across several other projects during my research that use similar techniques. These projects explore both ptrace code injection as well as terminal mangling. If this is an area that interests you, these projects are worth studying.
+_shelljack_ is only the latest in a series of tools that can best be described as "Processes acting badly with ptrace." The most notable of these tools was [Metlstorm](https://twitter.com/Metlstorm)'s [ssh-jack](http://www.blackhat.com/presentations/bh-usa-05/bh-us-05-boileau.pdf) from 2005 which opened the door for this style of attack. Metlstorm's tool uses [Python](https://www.python.org/) and [GDB](http://www.sourceware.org/gdb/) scripts to tap into an active SSH session. The Ubuntu security team [added a patch](http://www.gossamer-threads.com/lists/linux/kernel/1239943) to reduce the attack surface represented by ptrace as a direct response to ssh-jack.
+
+I also came across several other projects during my research that use similar techniques to explore both ptrace code injection as well as terminal mangling. If this is an area that interests you, these other projects are also worth studying.
 
 * [retty](http://pasky.or.cz/dev/retty/) is a tiny tool that lets you attach processes running on other terminals.
 * [neercs](http://caca.zoy.org/wiki/neercs) allows you to detach a session from a terminal.
