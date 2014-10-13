@@ -67,6 +67,9 @@
 #include "libctty.h"
 
 
+char *CALLING_CARD = "@emptymonkey - https://github.com/emptymonkey";
+
+
 #define LOCAL_BUFFER_LEN 64
 #define READLINE_BUFFER_LEN	256
 
