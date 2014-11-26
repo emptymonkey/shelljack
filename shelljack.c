@@ -545,12 +545,8 @@ CLEAN_UP:
 		error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCGWINSZ, (unsigned long) &argp);
 	}
 
-	if((sig_pid = tcgetsid(new_tty_fd)) == -1){
-		error(-1, errno, "tcgetsid(%d)", new_tty_fd);
-	}
-
-	if((retval = kill(-sig_pid, SIGWINCH)) == -1){
-		error(-1, errno, "kill(%d, %d)", -sig_pid, SIGWINCH);
+	if((retval = kill(-target_pid, SIGWINCH)) == -1){
+		error(-1, errno, "kill(%d, %d)", -target_pid, SIGWINCH);
 	}
 
 
@@ -589,10 +585,8 @@ CLEAN_UP:
 				 */
 				case SIGHUP:
 
-					if((sig_pid = tcgetsid(new_tty_fd)) != -1){
-						if((retval = kill(-sig_pid, current_sig)) == -1){
-							error(-1, errno, "kill(%d, %d)", -sig_pid, current_sig);
-						}
+					if((retval = kill(-target_pid, current_sig)) == -1){
+						error(-1, errno, "kill(%d, %d)", -target_pid, current_sig);
 					}
 
 					if((retval = sigaction(current_sig, &oldact, NULL)) == -1){
@@ -626,12 +620,8 @@ CLEAN_UP:
 						error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCSWINSZ, (unsigned long) &argp);
 					}
 
-					if((sig_pid = tcgetsid(new_tty_fd)) == -1){
-						error(-1, errno, "tcgetsid(%d)", new_tty_fd);
-					}
-
-					if((retval = kill(-sig_pid, current_sig)) == -1){
-						error(-1, errno, "kill(%d, %d)", -sig_pid, current_sig);
+					if((retval = kill(-target_pid, current_sig)) == -1){
+						error(-1, errno, "kill(%d, %d)", -target_pid, current_sig);
 					}
 					break;
 
@@ -669,7 +659,10 @@ CLEAN_UP:
 				}
 			}else{
 				if(bytes_read == 1){
-					write(STDOUT_FILENO, &char_read, 1);
+					if(write(STDOUT_FILENO, &char_read, 1) == -1){
+						error(-1, errno, "write(%d, %lx, %d)", \
+								STDOUT_FILENO, (unsigned long) &char_read, 1);
+					}
 					char_read = scratch[0];
 				}
 			}
@@ -692,7 +685,10 @@ CLEAN_UP:
 						original_tty_fd, (unsigned long) &char_read, bytes_read);
 			}
 
-			write(STDOUT_FILENO, scratch, bytes_read);
+			if(write(STDOUT_FILENO, scratch, bytes_read) == -1){
+				error(-1, errno, "write(%d, %lx, %d)", \
+						STDOUT_FILENO, (unsigned long) &char_read, 1);
+			}
 		}
 	}
 
