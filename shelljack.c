@@ -100,6 +100,7 @@ void signal_handler(int signal){
 int main(int argc, char **argv){
 
 	int i, retval;
+	int retcode = 0;
 	int tmp_fd, fd_max;
 	int ptrace_error;
 	int original_tty_fd, new_tty_fd;
@@ -518,19 +519,44 @@ CLEAN_UP:
 	act.sa_handler = signal_handler;
 
 	if((retval = sigaction(SIGHUP, &act, &oldact)) == -1){
-		error(-1, errno, "sigaction(%d, %lx, %lx)", SIGHUP, (unsigned long) &act, (unsigned long) &oldact);
+		fprintf(stderr, "%s: sigaction(%d, %lx, %lx): %s\n", \
+				program_invocation_short_name, \
+				SIGHUP, (unsigned long) &act, (unsigned long) &oldact, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 	if((retval = sigaction(SIGINT, &act, NULL)) == -1){
-		error(-1, errno, "sigaction(%d, %lx, %p)", SIGINT, (unsigned long) &act, NULL);
+		fprintf(stderr, "%s: sigaction(%d, %lx, %p): %s\n", \
+				program_invocation_short_name, \
+				SIGINT, (unsigned long) &act, NULL, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 	if((retval = sigaction(SIGQUIT, &act, NULL)) == -1){
-		error(-1, errno, "sigaction(%d, %lx, %p)", SIGQUIT, (unsigned long) &act, NULL);
+		fprintf(stderr, "%s: sigaction(%d, %lx, %p): %s\n", \
+				program_invocation_short_name, \
+				SIGQUIT, (unsigned long) &act, NULL, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 	if((retval = sigaction(SIGTSTP, &act, NULL)) == -1){
-		error(-1, errno, "sigaction(%d, %lx, %p)", SIGTSTP, (unsigned long) &act, NULL);
+		fprintf(stderr, "%s: sigaction(%d, %lx, %p): %s\n", \
+				program_invocation_short_name, \
+				SIGTSTP, (unsigned long) &act, NULL, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 	if((retval = sigaction(SIGWINCH, &act, NULL)) == -1){
-		error(-1, errno, "sigaction(%d, %lx, %p)", SIGWINCH, (unsigned long) &act, NULL);
+		fprintf(stderr, "%s: sigaction(%d, %lx, %p: %s)", \
+				program_invocation_short_name, \
+				SIGWINCH, (unsigned long) &act, NULL, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 
 	/*
@@ -538,15 +564,30 @@ CLEAN_UP:
 	 *	Lets force an initial SIGWINCH to ensure it gets set appropriately.
 	 */
 	if((retval = ioctl(original_tty_fd, TIOCGWINSZ, &argp)) == -1){
-		error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCGWINSZ, (unsigned long) &argp);
+		fprintf(stderr, "%s: ioctl(%d, %d, %lx): %s\n", \
+				program_invocation_short_name, \
+				original_tty_fd, TIOCGWINSZ, (unsigned long) &argp, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 
 	if((retval = ioctl(new_tty_fd, TIOCSWINSZ, &argp)) == -1){
-		error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCGWINSZ, (unsigned long) &argp);
+		fprintf(stderr, "%s: ioctl(%d, %d, %lx): %s\n", \
+				program_invocation_short_name, \
+				original_tty_fd, TIOCGWINSZ, (unsigned long) &argp, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 
 	if((retval = kill(-target_pid, SIGWINCH)) == -1){
-		error(-1, errno, "kill(%d, %d)", -target_pid, SIGWINCH);
+		fprintf(stderr, "%s: kill(%d, %d): %s\n", \
+				program_invocation_short_name, \
+				-target_pid, SIGWINCH, \
+				strerror(errno));
+		retcode = -errno;
+		goto RESET_TERM;
 	}
 
 
@@ -563,8 +604,12 @@ CLEAN_UP:
 		FD_SET(original_tty_fd, &fd_select);
 
 		if(((retval = select(fd_max + 1, &fd_select, NULL, NULL, NULL)) == -1) && !sig_found){
-			error(-1, errno, "select(%d, %lx, %p, %p, %p)", \
-					fd_max + 1, (unsigned long) &fd_select, NULL, NULL, NULL);
+			fprintf(stderr, "%s: select(%d, %lx, %p, %p, %p): %s\n", \
+					program_invocation_short_name, \
+					fd_max + 1, (unsigned long) &fd_select, NULL, NULL, NULL, \
+					strerror(errno));
+			retcode = -errno;
+			goto RESET_TERM;
 		}
 
 		if(sig_found){
@@ -586,15 +631,30 @@ CLEAN_UP:
 				case SIGHUP:
 
 					if((retval = kill(-target_pid, current_sig)) == -1){
-						error(-1, errno, "kill(%d, %d)", -target_pid, current_sig);
+						fprintf(stderr, "%s: kill(%d, %d): %s\n", \
+								program_invocation_short_name, \
+								-target_pid, current_sig, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 
 					if((retval = sigaction(current_sig, &oldact, NULL)) == -1){
-						error(-1, errno, "sigaction(%d, %lx, %p)", current_sig, (unsigned long) &oldact, NULL);
+						fprintf(stderr, "%s: sigaction(%d, %lx, %p): %s\n", \
+								program_invocation_short_name, \
+								current_sig, (unsigned long) &oldact, NULL, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 
 					if((retval = raise(current_sig)) != 0){
-						error(-1, errno, "raise(%d)", current_sig);
+						fprintf(stderr, "%s: raise(%d): %s\n", \
+								program_invocation_short_name, \
+								current_sig, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 					break;
 
@@ -603,31 +663,59 @@ CLEAN_UP:
 				case SIGTSTP:
 
 					if((sig_pid = tcgetpgrp(new_tty_fd)) == -1){
-						error(-1, errno, "tcgetpgrp(%d)", new_tty_fd);
+						fprintf(stderr, "%s: tcgetpgrp(%d): %s\n", \
+								program_invocation_short_name, \
+								new_tty_fd, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 
 					if((retval = kill(-sig_pid, current_sig)) == -1){
-						error(-1, errno, "kill(%d, %d)", sig_pid, current_sig);
+						fprintf(stderr, "%s: kill(%d, %d): %s", \
+								program_invocation_short_name, \
+								sig_pid, current_sig, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 					break;
 
 				case SIGWINCH: 
 					if((retval = ioctl(original_tty_fd, TIOCGWINSZ, &argp)) == -1){
-						error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCGWINSZ, (unsigned long) &argp);
+						fprintf(stderr, "%s: ioctl(%d, %d, %lx): %s\n", \
+								program_invocation_short_name, \
+								original_tty_fd, TIOCGWINSZ, (unsigned long) &argp, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 
 					if((retval = ioctl(new_tty_fd, TIOCSWINSZ, &argp)) == -1){
-						error(-1, errno, "ioctl(%d, %d, %lx)", original_tty_fd, TIOCSWINSZ, (unsigned long) &argp);
+						fprintf(stderr, "%s: ioctl(%d, %d, %lx): %s\n", \
+								program_invocation_short_name, \
+								original_tty_fd, TIOCSWINSZ, (unsigned long) &argp, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 
 					if((retval = kill(-target_pid, current_sig)) == -1){
-						error(-1, errno, "kill(%d, %d)", -target_pid, current_sig);
+						fprintf(stderr, "%s: kill(%d, %d): %s", \
+								program_invocation_short_name, \
+								-target_pid, current_sig, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 					break;
 
 				default:
-					error(0, 0, "Undefined signal found: %d", current_sig);
-					break;
+					fprintf(stderr, "%s: Undefined signal found: %d", \
+							program_invocation_short_name, \
+							current_sig);
+					retcode = -errno;
+					goto RESET_TERM;
 			}
 
 			current_sig = 0;
@@ -643,14 +731,22 @@ CLEAN_UP:
 
 			memset(scratch, 0, sizeof(scratch));
 			if((retval = read(original_tty_fd, scratch, sizeof(scratch))) == -1){
-				error(-1, errno, "read(%d, %lx, %d)", \
-						original_tty_fd, (unsigned long) scratch, (int) sizeof(scratch));
+				fprintf(stderr, "%s: read(%d, %lx, %d): %s\n", \
+						program_invocation_short_name, \
+						original_tty_fd, (unsigned long) scratch, (int) sizeof(scratch), \
+						strerror(errno));
+				retcode = -errno;
+				goto RESET_TERM;
 			}
 			bytes_read = (retval == -1) ? 0 : retval;
 
 			if((retval = write(new_tty_fd, scratch, bytes_read)) == -1){
-				error(-1, errno, "write(%d, %lx, %d)", \
-						new_tty_fd, (unsigned long) scratch, bytes_read);
+				fprintf(stderr, "%s: write(%d, %lx, %d): %s\n", \
+						program_invocation_short_name, \
+						new_tty_fd, (unsigned long) scratch, bytes_read, \
+						strerror(errno));
+				retcode = -errno;
+				goto RESET_TERM;
 			}
 
 			if(!char_read){
@@ -660,8 +756,12 @@ CLEAN_UP:
 			}else{
 				if(bytes_read == 1){
 					if(write(STDOUT_FILENO, &char_read, 1) == -1){
-						error(-1, errno, "write(%d, %lx, %d)", \
-								STDOUT_FILENO, (unsigned long) &char_read, 1);
+						fprintf(stderr, "%s: write(%d, %lx, %d): %s\n", \
+								program_invocation_short_name, \
+								STDOUT_FILENO, (unsigned long) &char_read, 1, \
+								strerror(errno));
+						retcode = -errno;
+						goto RESET_TERM;
 					}
 					char_read = scratch[0];
 				}
@@ -673,24 +773,40 @@ CLEAN_UP:
 			memset(scratch, 0, sizeof(scratch));
 			errno = 0;
 			if(((retval = read(new_tty_fd, scratch, sizeof(scratch))) == -1) && (errno != EIO)){
-				error(-1, errno, "read(%d, %lx, %d)", \
-						new_tty_fd, (unsigned long) scratch, (int) sizeof(scratch));
+				fprintf(stderr, "%s: read(%d, %lx, %d): %s\n", \
+						program_invocation_short_name, \
+						new_tty_fd, (unsigned long) scratch, (int) sizeof(scratch), \
+						strerror(errno));
+				retcode = -errno;
+				goto RESET_TERM;
 			}else if(!retval || errno == EIO){
-				exit(0);
+				retcode = 0;
+				goto RESET_TERM;
 			}
 			bytes_read = (retval == -1) ? 0 : retval;
 
 			if((retval = write(original_tty_fd, scratch, bytes_read)) == -1){
-				error(-1, errno, "write(%d, %lx, %d)", \
-						original_tty_fd, (unsigned long) &char_read, bytes_read);
+				fprintf(stderr, "%s: write(%d, %lx, %d): %s\n", \
+						program_invocation_short_name, \
+						original_tty_fd, (unsigned long) &char_read, bytes_read, \
+						strerror(errno));
+				retcode = -errno;
+				goto RESET_TERM;
 			}
 
 			if(write(STDOUT_FILENO, scratch, bytes_read) == -1){
-				error(-1, errno, "write(%d, %lx, %d)", \
-						STDOUT_FILENO, (unsigned long) &char_read, 1);
+				fprintf(stderr, "%s: write(%d, %lx, %d): %s\n", \
+						program_invocation_short_name, \
+						STDOUT_FILENO, (unsigned long) &char_read, 1, \
+						strerror(errno));
+				retcode = -errno;
+				goto RESET_TERM;
 			}
 		}
 	}
 
-	return(0);
+RESET_TERM:
+	tcsetattr(original_tty_fd, TCSANOW, &saved_termios_attrs);
+
+	return(retcode);
 }
