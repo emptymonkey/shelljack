@@ -38,6 +38,7 @@
  *	This code uses Linux ptrace to pass x86-64 system calls into the target.
  *	Nothing here is portable, not even a little bit.
  *
+
  */
 
 #define _GNU_SOURCE
@@ -45,6 +46,7 @@
 
 #include <errno.h>
 #include <error.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
 #include <signal.h>
@@ -61,6 +63,7 @@
 #include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "libptrace_do.h"
@@ -84,10 +87,11 @@ void sig_handler(int signal);
 
 
 void usage(){
-	fprintf(stderr, "usage: %s LISTENER:PORT PID\n", program_invocation_short_name);
-	fprintf(stderr, "\tLISTENER:\tHostname or IP address of the listener.\n");
-	fprintf(stderr, "\tPORT:\tPort number that the listener will be listening on.\n");
-	fprintf(stderr, "\tPID:\tProcess ID of the target process.\n");
+	fprintf(stderr, "usage: %s [-f FILE]|[-n HOSTNAME:PORT] PID\n", program_invocation_short_name);
+	fprintf(stderr, "\t-f FILE\t\t\tSend the output to a FILE. (This is particularly useful with FIFOs.)\n");
+	fprintf(stderr, "\t-n HOSTNAME:PORT\tConnect to the HOSTNAME and PORT then send the output there.\n");
+	fprintf(stderr, "\tPID\t\t\tProcess ID of the target process.\n");
+	fprintf(stderr, "\tNOTE: One of either -f or -n is required.\n");
 	exit(-1);
 }
 
@@ -100,6 +104,7 @@ void signal_handler(int signal){
 int main(int argc, char **argv){
 
 	int i, retval;
+	int opt;
 	int retcode = 0;
 	int tmp_fd, fd_max;
 	int ptrace_error;
@@ -111,7 +116,7 @@ int main(int argc, char **argv){
 	int target_fd_count, *target_fds = NULL;
 	int fcntl_flags;
 
-	char *argv_index;	
+	char *hostname_index;	
 	char scratch[LOCAL_BUFFER_LEN];
 	char *remote_scratch = NULL;
 	char char_read;
@@ -135,17 +140,44 @@ int main(int argc, char **argv){
 
 	struct rlimit fd_limit;
 
-	if(argc != 3){
+	char *filename = NULL;
+	char *hostname = NULL;
+
+ while ((opt = getopt(argc, argv, "f:n:")) != -1) {
+
+    switch (opt) {
+      case 'f':
+        filename = optarg;
+        break;
+
+      case 'n':
+        hostname = optarg;
+        break;
+
+      case 'h':
+      default:
+        usage();
+    }
+  }
+
+	if((argc - optind) != 1){
 		usage();
 	}
 
-	if(((argv_index = index(argv[1], ':')) == NULL)){
+	if((filename && hostname) || !(filename || hostname)){
 		usage();
 	}
-	*argv_index = '\0';
-	argv_index++;
 
-	if(!(target_pid = strtol(argv[2], NULL, 10))){
+	hostname_index = NULL;
+	if(hostname){
+		if((hostname_index = index(hostname, ':')) == NULL){
+			usage();
+		}
+		*hostname_index = '\0';
+		hostname_index++;
+	}
+
+	if(!(target_pid = strtol(argv[optind], NULL, 10))){
 		usage();
 	}
 
@@ -178,10 +210,10 @@ int main(int argc, char **argv){
 	}
 
 	if((retval = getrlimit(RLIMIT_NOFILE, &fd_limit))){
-		error(-1, errno, "getrlimie(RLIMIT_NOFILE, %lx)", (unsigned long) &fd_limit);
+		error(-1, errno, "getrlimit(RLIMIT_NOFILE, %lx)", (unsigned long) &fd_limit);
 	}
 
-	
+
 	// Lets close any file descriptors we may have inherited.
 	for(i = 0; i < (int) fd_limit.rlim_max; i++){
 		if(i != STDERR_FILENO){
@@ -194,45 +226,58 @@ int main(int argc, char **argv){
 	 * Connect to the listener and set up stdout and stderr
 	 *************************************************************/
 
-	memset(&addrinfo_hint, 0, sizeof(struct addrinfo));
-	addrinfo_hint.ai_family = AF_UNSPEC;
-	addrinfo_hint.ai_socktype = SOCK_STREAM;
+	addrinfo_ptr = NULL;
+	if(hostname){
+		memset(&addrinfo_hint, 0, sizeof(struct addrinfo));
+		addrinfo_hint.ai_family = AF_UNSPEC;
+		addrinfo_hint.ai_socktype = SOCK_STREAM;
 
-	if((retval = getaddrinfo(argv[1], argv_index, &addrinfo_hint, &addrinfo_result))){
-		error(-1, 0, "getaddrinfo(%s, %s, %d, %lx): %s", \
-				argv[1], argv_index, 0, (unsigned long) &addrinfo_result, gai_strerror(retval));
-	}
-
-	for(addrinfo_ptr = addrinfo_result; addrinfo_ptr != NULL; addrinfo_ptr = addrinfo_ptr->ai_next){
-
-		if((tmp_fd = socket(addrinfo_ptr->ai_family, addrinfo_ptr->ai_socktype, addrinfo_ptr->ai_protocol)) == -1){
-			continue;
+		if((retval = getaddrinfo(hostname, hostname_index, &addrinfo_hint, &addrinfo_result))){
+			error(-1, 0, "getaddrinfo(%s, %s, %d, %lx): %s", \
+					hostname, hostname_index, 0, (unsigned long) &addrinfo_result, gai_strerror(retval));
 		}
 
-		if((retval = connect(tmp_fd, addrinfo_ptr->ai_addr, addrinfo_ptr->ai_addrlen)) != -1){
-			break;
+		for(addrinfo_ptr = addrinfo_result; addrinfo_ptr != NULL; addrinfo_ptr = addrinfo_ptr->ai_next){
+
+			if((tmp_fd = socket(addrinfo_ptr->ai_family, addrinfo_ptr->ai_socktype, addrinfo_ptr->ai_protocol)) == -1){
+				continue;
+			}
+
+			if((retval = connect(tmp_fd, addrinfo_ptr->ai_addr, addrinfo_ptr->ai_addrlen)) != -1){
+				break;
+			}
+
+			close(tmp_fd);
 		}
 
-		close(tmp_fd);
+		if(addrinfo_ptr == NULL){
+			error(-1, 0, "Unable to connect to %s:%s. Quiting.", hostname, hostname_index);
+		}
+
+		/*
+		 * We will set the socket non-blocking. If the connection dies, the remote 
+		 * write() shouldn't block or cause an exit(). We *may* lose data, but not being
+		 * detected is the priority here.
+		 */
+		if((fcntl_flags = fcntl(tmp_fd, F_GETFL, 0)) == -1){
+			error(-1, errno, "fcntl(%d, FGETFL, 0)", tmp_fd);
+		}
+
+		fcntl_flags |= O_NONBLOCK;
+		if((retval = fcntl(tmp_fd, F_SETFL, fcntl_flags)) == -1){
+			error(-1, errno, "fcntl(%d, FSETFL, %d)", tmp_fd, fcntl_flags);
+		}
+
+	}else if(filename){
+
+		if((tmp_fd = open(filename, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR)) == -1){
+			error(-1, 0, "Unable to open file: %s  Quiting.", filename);
+		}
+
+	}else{
+		error(-1, 0, "No listener (network or file) specified. Quitting. (Should not be here!)");
 	}
 
-	if(addrinfo_ptr == NULL){
-		error(-1, 0, "Unable to connect to %s:%s. Quiting.", argv[1], argv_index);
-	}
-
-	/*
-	 * We will set the socket non-blocking. If the connection dies, the remote 
-	 * write() shouldn't block or cause an exit(). We *may* lose data, but not being
-	 * detected is the priority here.
-	 */
-	if((fcntl_flags = fcntl(tmp_fd, F_GETFL, 0)) == -1){
-		error(-1, errno, "fcntl(%d, FGETFL, 0)", tmp_fd);
-	}
-
-	fcntl_flags |= O_NONBLOCK;
-	if((retval = fcntl(tmp_fd, F_SETFL, fcntl_flags)) == -1){
-		error(-1, errno, "fcntl(%d, FSETFL, %d)", tmp_fd, fcntl_flags);
-	}
 
 	if((retval = close(STDERR_FILENO)) == -1){
 		error(-1, errno, "close(%d)", STDERR_FILENO);
@@ -246,6 +291,10 @@ int main(int argc, char **argv){
 		error(-1, errno, "dup2(%d, %d)", tmp_fd, STDOUT_FILENO);
 	}
 
+	if((retval = close(tmp_fd)) == -1){
+		error(-1, errno, "close(%d)", tmp_fd);
+	}
+
 
 	/*
 	 * This helps with a race condition if being launched out of the target's .profile in order 
@@ -256,7 +305,6 @@ int main(int argc, char **argv){
 	/***************************************
 	 * Print out some initialization data. *
 	 ***************************************/
-
 	memset(scratch, 0, LOCAL_BUFFER_LEN);
 	if((retval = gethostname(scratch, LOCAL_BUFFER_LEN)) == -1){
 		error(-1, errno, "gethostname(%lx, %d)", (unsigned long) scratch, LOCAL_BUFFER_LEN);
@@ -265,41 +313,40 @@ int main(int argc, char **argv){
 	printf("################################\n");
 	printf("# hostname: %s\n", scratch);
 
-	memset(&sa, 0, sizeof(sa));
-	sa_len = sizeof(sa);
-	if((retval = getsockname(tmp_fd, &sa, &sa_len)) == -1){
-		error(-1, errno, "getsockname(%d, %lx, %lx)", tmp_fd, (unsigned long) &sa, (unsigned long) &sa_len);
+	if(hostname){
+		memset(&sa, 0, sizeof(sa));
+		sa_len = sizeof(sa);
+		if((retval = getsockname(tmp_fd, &sa, &sa_len)) == -1){
+			error(-1, errno, "getsockname(%d, %lx, %lx)", tmp_fd, (unsigned long) &sa, (unsigned long) &sa_len);
+		}
+
+		memset(scratch, 0, LOCAL_BUFFER_LEN);
+		switch(addrinfo_ptr->ai_family){
+			case AF_INET:
+				if(inet_ntop(addrinfo_ptr->ai_family, &(((struct sockaddr_in *) &sa)->sin_addr), scratch, LOCAL_BUFFER_LEN) == NULL){
+					error(-1, errno, "inet_ntop(%d, %lx, %lx, %d)", addrinfo_ptr->ai_family, (unsigned long) &(sa.sa_data), (unsigned long) scratch, LOCAL_BUFFER_LEN);
+				}
+				break;
+
+			case AF_INET6:
+				if(inet_ntop(addrinfo_ptr->ai_family, &(((struct sockaddr_in6 *) &sa)->sin6_addr), scratch, LOCAL_BUFFER_LEN) == NULL){
+					error(-1, errno, "inet_ntop(%d, %lx, %lx, %d)", addrinfo_ptr->ai_family, (unsigned long) &(sa.sa_data), (unsigned long) scratch, LOCAL_BUFFER_LEN);
+				}
+				break;
+
+			default:
+				error(-1, 0, "unknown ai_family: %d\n", addrinfo_ptr->ai_family);
+		}
+		printf("# ip address: %s\n", scratch);
+
+		freeaddrinfo(addrinfo_result);
 	}
-
-	memset(scratch, 0, LOCAL_BUFFER_LEN);
-	switch(addrinfo_ptr->ai_family){
-		case AF_INET:
-			if(inet_ntop(addrinfo_ptr->ai_family, &(((struct sockaddr_in *) &sa)->sin_addr), scratch, LOCAL_BUFFER_LEN) == NULL){
-				error(-1, errno, "inet_ntop(%d, %lx, %lx, %d)", addrinfo_ptr->ai_family, (unsigned long) &(sa.sa_data), (unsigned long) scratch, LOCAL_BUFFER_LEN);
-			}
-			break;
-
-		case AF_INET6:
-			if(inet_ntop(addrinfo_ptr->ai_family, &(((struct sockaddr_in6 *) &sa)->sin6_addr), scratch, LOCAL_BUFFER_LEN) == NULL){
-				error(-1, errno, "inet_ntop(%d, %lx, %lx, %d)", addrinfo_ptr->ai_family, (unsigned long) &(sa.sa_data), (unsigned long) scratch, LOCAL_BUFFER_LEN);
-			}
-			break;
-
-		default:
-			error(-1, 0, "unknown ai_family: %d\n", addrinfo_ptr->ai_family);
-	}
-	printf("# ip address: %s\n", scratch);
 
 	printf("# username: %s\n", getenv("LOGNAME"));
 
 	printf("################################\n");
 	fflush(stdout);
 
-	if((retval = close(tmp_fd)) == -1){
-		error(-1, errno, "close(%d)", tmp_fd);
-	}
-
-	freeaddrinfo(addrinfo_result);
 
 
 	/**************************************
