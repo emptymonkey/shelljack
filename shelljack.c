@@ -291,10 +291,6 @@ int main(int argc, char **argv){
 		error(-1, errno, "dup2(%d, %d)", tmp_fd, STDOUT_FILENO);
 	}
 
-	if((retval = close(tmp_fd)) == -1){
-		error(-1, errno, "close(%d)", tmp_fd);
-	}
-
 
 	/*
 	 * This helps with a race condition if being launched out of the target's .profile in order 
@@ -340,6 +336,10 @@ int main(int argc, char **argv){
 		printf("# ip address: %s\n", scratch);
 
 		freeaddrinfo(addrinfo_result);
+	}
+
+	if((retval = close(tmp_fd)) == -1){
+		error(-1, errno, "close(%d)", tmp_fd);
 	}
 
 	printf("# username: %s\n", getenv("LOGNAME"));
