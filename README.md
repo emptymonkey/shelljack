@@ -79,7 +79,7 @@ Now, launch _shelljack_ against the target shell:
 
 	empty@monkey:~$ tty
 	/dev/pts/2
-	empty@monkey:~$ shelljack localhost:9999 19716
+	empty@monkey:~$ shelljack -n localhost:9999 19716
 
 That was it! If we go back to the listener, we will now see all of the I/O come through the listener as it is typed into the target shell. For further evidence of this, lets examine the target shell again:
 
