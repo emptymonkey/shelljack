@@ -63,6 +63,7 @@
 #include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -87,11 +88,12 @@ void sig_handler(int signal);
 
 
 void usage(){
-	fprintf(stderr, "usage: %s [-f FILE]|[-n HOSTNAME:PORT] PID\n", program_invocation_short_name);
+	fprintf(stderr, "usage: %s [-f FILE]|[-n HOSTNAME:PORT]|[-s UNIX_SOCKET] PID\n", program_invocation_short_name);
 	fprintf(stderr, "\t-f FILE\t\t\tSend the output to a FILE. (This is particularly useful with FIFOs.)\n");
 	fprintf(stderr, "\t-n HOSTNAME:PORT\tConnect to the HOSTNAME and PORT then send the output there.\n");
+	fprintf(stderr, "\t-s UNIX_SOCKET\t\tConnect to the UNIX_SOCKET then send the output there.\n");
 	fprintf(stderr, "\tPID\t\t\tProcess ID of the target process.\n");
-	fprintf(stderr, "\tNOTE: One of either -f or -n is required.\n");
+	fprintf(stderr, "\tNOTE: One of either -f, -n, or -s is required.\n");
 	exit(-1);
 }
 
@@ -127,6 +129,7 @@ int main(int argc, char **argv){
 	struct ptrace_do *target;
 	struct termios saved_termios_attrs, new_termios_attrs;
 	struct sockaddr sa;
+	struct sockaddr_un unix_sa;
 	struct sigaction act, oldact;
 	struct winsize argp;
 
@@ -142,8 +145,9 @@ int main(int argc, char **argv){
 
 	char *filename = NULL;
 	char *hostname = NULL;
+	char *unix_socket = NULL;
 
- while ((opt = getopt(argc, argv, "f:n:")) != -1) {
+ while ((opt = getopt(argc, argv, "f:n:s:")) != -1) {
 
     switch (opt) {
       case 'f':
@@ -153,6 +157,10 @@ int main(int argc, char **argv){
       case 'n':
         hostname = optarg;
         break;
+
+			case 's':
+				unix_socket = optarg;
+				break;
 
       case 'h':
       default:
@@ -164,7 +172,7 @@ int main(int argc, char **argv){
 		usage();
 	}
 
-	if((filename && hostname) || !(filename || hostname)){
+	if((filename && hostname) || (filename && unix_socket) || (hostname && unix_socket) || !(filename || hostname || unix_socket)){
 		usage();
 	}
 
@@ -274,6 +282,18 @@ int main(int argc, char **argv){
 			error(-1, 0, "Unable to open file: %s  Quiting.", filename);
 		}
 
+	}else if(unix_socket){
+		if((tmp_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+			error(-1, 0, "Unable to open UNIX socket: %s  Quiting.", unix_socket);
+		}
+
+		memset(&unix_sa, 0, sizeof(unix_sa));
+		unix_sa.sun_family = AF_UNIX;
+		strncpy(unix_sa.sun_path, unix_socket, sizeof(unix_sa.sun_path) - 1);
+
+		if((tmp_fd = connect(tmp_fd, (const struct sockaddr *) &unix_sa, sizeof(unix_sa))) == -1){
+			error(-1, 0, "Unable to connect to UNIX socket: %s  Quiting.", unix_socket);
+		}
 	}else{
 		error(-1, 0, "No listener (network or file) specified. Quitting. (Should not be here!)");
 	}
